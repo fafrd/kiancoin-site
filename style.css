@@ -1,0 +1,22 @@
+html {
+    background: black;
+
+}
+
+body {
+    background: black;
+    color: #ccc;
+    padding: 2em 1em;
+    font-size: 2em;
+    font-family: monospace;
+}
+
+#balance {
+    font-weight: bold;
+    font-style: italic;
+    font-size: 1.17em;
+}
+
+a {
+    color: green;
+}
