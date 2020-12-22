@@ -17,6 +17,10 @@ body {
     font-size: 1.17em;
 }
 
+#addToMetaMask {
+    display: none;
+}
+
 a {
     color: green;
 }
