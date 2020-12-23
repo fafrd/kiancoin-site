@@ -72,13 +72,16 @@ const initialize = async () => {
     }
 
     if(!isEthereumAvailable()) {
+        // prompt user to install metamask
         document.getElementById("balance").innerHTML = "<a href=\"https://metamask.io/download.html\">Install MetaMask wallet</a> to view your balance";
     } else {
         document.getElementById("addToMetaMask").addEventListener("click", addToMetaMask);
         await isMetaMaskConnected().then((connected) => {
             if (connected) {
+                // metamask is connected; set balance
                 setBalance();
             } else {
+                // metamask is not connected; prompt to connect
                 document.getElementById("balance").innerHTML = "<a href=\"#\">Connect your wallet</a> to view balance";
                 document.getElementById("balance").addEventListener("click", connectWallet);
             }
