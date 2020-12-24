@@ -8,14 +8,15 @@ if (ethereum) {
     var provider = new ethers.providers.Web3Provider(ethereum);
 }
 
-const isEthereumAvailable = () => {
-    return Boolean(ethereum);
-};
+const isEthereumAvailable = () => Boolean(ethereum);
+const isMetaMaskConnected = async () => await provider.listAccounts()
+    .then((accounts) => accounts.length > 0);
 
-const isMetaMaskConnected = async () => {
-    const accounts = await provider.listAccounts();
-    return accounts.length > 0;
-};
+const getContract = async () => await new ethers.Contract(kianAddress, kianABI, provider);
+const getBalanceForAddress = async (address) => await getContract()
+    .then((contract) => contract.balanceOf(address))
+    .then((balance) => Number(balance / 1000000000000000000))
+    .then((balance) => balance.toLocaleString(undefined, { minimumFractionDigits: 1, maximumFractionDigits: 18 }));
 
 const connectWallet = async () => {
     console.log("connect()");
@@ -37,37 +38,27 @@ const connectWallet = async () => {
 
 const setBalance = async () => {
     console.log("setBalance()")
-    //await provider.getBlockNumber().then((blockNum) => { console.log(blockNum) })
 
-    const getBalance = async () => {
-        const userAddress = await provider.getSigner().getAddress()
-        const contract = await new ethers.Contract(kianAddress, kianABI, provider);
-        const balance = await contract.balanceOf(userAddress);
-        return balance.toString();
-    };
+    const userAddress = await provider.getSigner().getAddress();
+    const balance = await getBalanceForAddress(userAddress);
 
-    await getBalance().then((balance) => {
-        let numKians = Number(balance / 1000000000000000000);
-        document.getElementById("balance").innerHTML = numKians.toLocaleString(undefined, { minimumFractionDigits: 1, maximumFractionDigits: 18 }) + " kiancoin";
-        if (balance > 0) {
-            document.getElementById("addToMetaMask").style.display = "initial";
-        }
-    });
+    document.getElementById("balance").innerHTML = balance + " kiancoin";
+    if (balance > 0) {
+        document.getElementById("addToMetaMask").style.display = "initial";
+    }
 };
 
-const addToMetaMask = () => {
-    ethereum.request({
-        method: 'wallet_watchAsset',
-        params: {
-            type: 'ERC20',
-            options: {
-                address: '0xb259adadb959ebb03cb280fba58cc3172e96dc78',
-                symbol: 'KIAN',
-                decimals: 18,
-            },
-        }
-    });
-};
+const addToMetaMask = () => ethereum.request({
+    method: 'wallet_watchAsset',
+    params: {
+        type: 'ERC20',
+        options: {
+            address: '0xb259adadb959ebb03cb280fba58cc3172e96dc78',
+            symbol: 'KIAN',
+            decimals: 18,
+        },
+    }
+});
 
 const queryGraph = async () => {
     console.log("queryGraph");
@@ -93,19 +84,18 @@ const queryGraph = async () => {
     }).then(r => r.json());
 };
 
-const populateTopHoldersList = (queryResp) => {
+const populateTopHoldersList = async (queryResp) => {
     console.log("populateTopHoldersList", queryResp);
-    console.log(JSON.stringify(queryResp[0]));
+    //console.log(JSON.stringify(queryResp[0]));
 
-    // So this is actually going to be a bit tricky. I want to make an ordrered list of the holders of kiancoin,
-    // but all I have is this list of past transfers. We're going to need to recreate a list of the holders
-    // based on this transfer history.
+    // This is actually a bit tricky. I want to make an ordrered list of the holders of kiancoin,
+    // but the erc20 contract doesn't give us a way to reverse-lookup who the holders are.
+    // So what we'll do is use a Graph protocol nodes to look up who has received kiancoin in the past,
+    // then get the balance for all those addresses.
 
-    // for now, we're just going to be lazy and record transfer history.
     for (var i = 0; i < queryResp.length; i++) {
-        let numKians = Number(queryResp[i].value / 1000000000000000000);
-        let numKiansStr = numKians.toLocaleString(undefined, { minimumFractionDigits: 1, maximumFractionDigits: 18 });
-        var entry = queryResp[i].to + " received " + numKiansStr + " kiancoins";
+        let numKiansStr = await getBalanceForAddress(queryResp[i].to);
+        var entry = queryResp[i].to + ": " + numKiansStr + " kiancoins";
 
         var li = document.createElement('li');
         li.appendChild(document.createTextNode(entry));
