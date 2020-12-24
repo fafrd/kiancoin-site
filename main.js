@@ -8,10 +8,20 @@ if (ethereum) {
     var provider = new ethers.providers.Web3Provider(ethereum);
 }
 
+const isEthereumAvailable = () => {
+    return Boolean(ethereum);
+};
+
+const isMetaMaskConnected = async () => {
+    const accounts = await provider.listAccounts();
+    return accounts.length > 0;
+};
+
 const connectWallet = async () => {
     console.log("connect()");
 
     // set up callback for when connection is done
+    // TODO should be moved into initialize() so this callback is always available
     ethereum.on('accountsChanged', () => {
         console.log("account changed detected");
         setBalance();
@@ -23,7 +33,7 @@ const connectWallet = async () => {
     });
 
     console.log("done")
-}
+};
 
 const setBalance = async () => {
     console.log("setBalance()")
@@ -34,7 +44,7 @@ const setBalance = async () => {
         const contract = await new ethers.Contract(kianAddress, kianABI, provider);
         const balance = await contract.balanceOf(userAddress);
         return balance.toString();
-    }
+    };
 
     await getBalance().then((balance) => {
         let numKians = Number(balance / 1000000000000000000);
@@ -43,7 +53,7 @@ const setBalance = async () => {
             document.getElementById("addToMetaMask").style.display = "initial";
         }
     });
-}
+};
 
 const addToMetaMask = () => {
     ethereum.request({
@@ -57,20 +67,62 @@ const addToMetaMask = () => {
             },
         }
     });
-}
+};
+
+const queryGraph = async () => {
+    console.log("queryGraph");
+
+    const endpoint = "http://localhost:8000/subgraphs/id/QmZc1R7j7gu3DZvQ87EPUEibUh6sYTdpLq9u5xDSrsGXog";
+    const query = `{
+        transfers {
+            id
+            from
+            to
+            value
+        }
+    }`;
+    //await new Promise(r => setTimeout(r, 2000));
+
+    return await fetch(endpoint, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+        },
+        body: JSON.stringify({query})
+    }).then(r => r.json());
+};
+
+const populateTopHoldersList = (queryResp) => {
+    console.log("populateTopHoldersList", queryResp);
+    console.log(JSON.stringify(queryResp[0]));
+
+    // So this is actually going to be a bit tricky. I want to make an ordrered list of the holders of kiancoin,
+    // but all I have is this list of past transfers. We're going to need to recreate a list of the holders
+    // based on this transfer history.
+
+    // for now, we're just going to be lazy and record transfer history.
+    for (var i = 0; i < queryResp.length; i++) {
+        let numKians = Number(queryResp[i].value / 1000000000000000000);
+        let numKiansStr = numKians.toLocaleString(undefined, { minimumFractionDigits: 1, maximumFractionDigits: 18 });
+        var entry = queryResp[i].to + " received " + numKiansStr + " kiancoins";
+
+        var li = document.createElement('li');
+        li.appendChild(document.createTextNode(entry));
+        document.getElementById("top-holders").appendChild(li);
+    }
+
+    document.getElementById("top-holders-loading").style.display = "none";
+};
 
 const initialize = async () => {
     console.log("initialize()");
 
-    const isEthereumAvailable = () => {
-        return Boolean(ethereum);
-    };
+    // Asynchronously start populating the list of top kiancoin holders
+    //queryGraph().then((t) => console.log(t.data));
+    queryGraph().then((queryResp) => populateTopHoldersList(queryResp.data.transfers));
 
-    const isMetaMaskConnected = async () => {
-        const accounts = await provider.listAccounts();
-        return accounts.length > 0;
-    }
-
+    // Start populating account balance
     if(!isEthereumAvailable()) {
         // prompt user to install metamask
         document.getElementById("balance").innerHTML = "<a href=\"https://metamask.io/download.html\">Install MetaMask wallet</a> to view your balance";

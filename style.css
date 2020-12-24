@@ -17,6 +17,13 @@ body {
     font-size: 1.17em;
 }
 
+#top-holders-loading {
+    font-style: italic;
+}
+
+#top-holders {
+}
+
 #addToMetaMask {
     display: none;
 }
