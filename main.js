@@ -20,12 +20,9 @@ const getBalanceForAddress = async (address) => await getContract()
     .then((balance) => balance.toLocaleString(undefined, { minimumFractionDigits: 1, maximumFractionDigits: 18 }));
 
 const connectWallet = async () => {
-    console.log("connect()");
-
     // set up callback for when connection is done
     // TODO should be moved into initialize() so this callback is always available
     ethereum.on('accountsChanged', () => {
-        console.log("account changed detected");
         setBalance();
     });
 
@@ -33,13 +30,9 @@ const connectWallet = async () => {
     await ethereum.request({
         method: 'eth_requestAccounts'
     });
-
-    console.log("done")
 };
 
 const setBalance = async () => {
-    console.log("setBalance()")
-
     const balance = await getUserAddress().then((addr) => getBalanceForAddress(addr));
     document.getElementById("balance").innerHTML = balance + " kiancoin";
     if (balance > 0) {
@@ -60,18 +53,12 @@ const addToMetaMask = () => ethereum.request({
 });
 
 const queryGraph = async () => {
-    console.log("queryGraph");
-
     const endpoint = "http://localhost:8000/subgraphs/id/QmZc1R7j7gu3DZvQ87EPUEibUh6sYTdpLq9u5xDSrsGXog";
     const query = `{
         transfers {
-            id
-            from
             to
-            value
         }
     }`;
-    //await new Promise(r => setTimeout(r, 2000));
 
     return await fetch(endpoint, {
         method: 'POST',
@@ -84,9 +71,6 @@ const queryGraph = async () => {
 };
 
 const populateTopHoldersList = async (queryResp) => {
-    console.log("populateTopHoldersList", queryResp);
-    //console.log(JSON.stringify(queryResp[0]));
-
     // This is actually a bit tricky. I want to make an ordrered list of the holders of kiancoin,
     // but the erc20 contract doesn't give us a way to reverse-lookup who the holders are.
     // So what we'll do is use a Graph protocol nodes to look up who has received kiancoin in the past,
@@ -114,10 +98,7 @@ const populateTopHoldersList = async (queryResp) => {
 };
 
 const initialize = async () => {
-    console.log("initialize()");
-
     // Asynchronously start populating the list of top kiancoin holders
-    //queryGraph().then((t) => console.log(t.data));
     queryGraph().then((queryResp) => populateTopHoldersList(queryResp.data.transfers));
 
     // Start populating account balance
