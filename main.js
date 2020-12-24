@@ -13,6 +13,7 @@ const isMetaMaskConnected = async () => await provider.listAccounts()
     .then((accounts) => accounts.length > 0);
 
 const getContract = async () => await new ethers.Contract(kianAddress, kianABI, provider);
+const getUserAddress = async() => await provider.getSigner().getAddress();
 const getBalanceForAddress = async (address) => await getContract()
     .then((contract) => contract.balanceOf(address))
     .then((balance) => Number(balance / 1000000000000000000))
@@ -39,9 +40,7 @@ const connectWallet = async () => {
 const setBalance = async () => {
     console.log("setBalance()")
 
-    const userAddress = await provider.getSigner().getAddress();
-    const balance = await getBalanceForAddress(userAddress);
-
+    const balance = await getUserAddress().then((addr) => getBalanceForAddress(addr));
     document.getElementById("balance").innerHTML = balance + " kiancoin";
     if (balance > 0) {
         document.getElementById("addToMetaMask").style.display = "initial";
@@ -93,13 +92,22 @@ const populateTopHoldersList = async (queryResp) => {
     // So what we'll do is use a Graph protocol nodes to look up who has received kiancoin in the past,
     // then get the balance for all those addresses.
 
-    for (var i = 0; i < queryResp.length; i++) {
-        let numKiansStr = await getBalanceForAddress(queryResp[i].to);
-        var entry = queryResp[i].to + ": " + numKiansStr + " kiancoins";
+    for (let i = 0; i < queryResp.length; i++) {
+        // asynchronously handle each entry...
+        // this iteration works because 'let' in a for loop declaration creates a unique value for each loop invocation
+        (async () => {
+            let numKiansStr = await getBalanceForAddress(queryResp[i].to);
+            let userAddress = await getUserAddress();
 
-        var li = document.createElement('li');
-        li.appendChild(document.createTextNode(entry));
-        document.getElementById("top-holders").appendChild(li);
+            let you = "";
+            if (queryResp[i].to.toLowerCase() == userAddress.toLowerCase())
+                you = " (you)";
+            var entry = queryResp[i].to + you + ": " + numKiansStr + " kiancoins";
+
+            var li = document.createElement('li');
+            li.appendChild(document.createTextNode(entry));
+            document.getElementById("top-holders").appendChild(li);
+        })();
     }
 
     document.getElementById("top-holders-loading").style.display = "none";
