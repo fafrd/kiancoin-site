@@ -53,7 +53,7 @@ const addToMetaMask = () => ethereum.request({
 });
 
 const queryGraph = async () => {
-    const endpoint = "http://localhost:8000/subgraphs/id/QmZc1R7j7gu3DZvQ87EPUEibUh6sYTdpLq9u5xDSrsGXog";
+    const endpoint = "http://graph.wizwar.net/subgraphs/id/QmZc1R7j7gu3DZvQ87EPUEibUh6sYTdpLq9u5xDSrsGXog";
     const query = `{
         transfers {
             to
@@ -67,7 +67,11 @@ const queryGraph = async () => {
             'Accept': 'application/json',
         },
         body: JSON.stringify({query})
-    }).then(r => r.json());
+    })
+    .then(r => r.json())
+    .catch((error) => {
+        console.error('Error while querying Graph node:', error);
+    });
 };
 
 const populateTopHoldersList = async (queryResp) => {
@@ -76,18 +80,36 @@ const populateTopHoldersList = async (queryResp) => {
     // So what we'll do is use a Graph protocol nodes to look up who has received kiancoin in the past,
     // then get the balance for all those addresses.
 
-    for (let i = 0; i < queryResp.length; i++) {
+    console.log(JSON.stringify(queryResp));
+
+    try {
+        var transfers = queryResp.data.transfers;
+    } catch (error) {
+        await new Promise(r => setTimeout(r, 1000));
+        console.warn("Unable to parse graph query response");
+        document.getElementById("top-holders-loading").innerHTML = "Unable to fetch list of holders.";
+        document.getElementById("top-holders-loading").style.color = "salmon";
+        document.getElementById("top-holders-loading").style.fontWeight = "bold";
+        return;
+    }
+
+    console.log("length: " + transfers.length)
+
+    for (let i = 0; i < transfers.length; i++) {
+        console.log("huh");
         // asynchronously handle each entry...
         // this iteration works because 'let' in a for loop declaration creates a unique value for each loop invocation
         (async () => {
-            let numKiansStr = await getBalanceForAddress(queryResp[i].to);
-            let userAddress = await getUserAddress();
-
+            console.log(i + ": " + JSON.stringify(transfers[i]));
+            let numKiansStr = await getBalanceForAddress(transfers[i].to);
             let you = "";
-            if (queryResp[i].to.toLowerCase() == userAddress.toLowerCase())
+            let userAddress = await getUserAddress().catch((error) => {
+                console.error('Error while retrieving user address:', error);
+            });
+            if (transfers[i].to.toLowerCase() == userAddress.toLowerCase())
                 you = " (you)";
-            var entry = queryResp[i].to + you + ": " + numKiansStr + " kiancoins";
 
+            var entry = transfers[i].to + you + ": " + numKiansStr + " kiancoins";
             var li = document.createElement('li');
             li.appendChild(document.createTextNode(entry));
             document.getElementById("top-holders").appendChild(li);
@@ -99,7 +121,7 @@ const populateTopHoldersList = async (queryResp) => {
 
 const initialize = async () => {
     // Asynchronously start populating the list of top kiancoin holders
-    queryGraph().then((queryResp) => populateTopHoldersList(queryResp.data.transfers));
+    queryGraph().then((queryResp) => populateTopHoldersList(queryResp));
 
     // Start populating account balance
     if(!isEthereumAvailable()) {
