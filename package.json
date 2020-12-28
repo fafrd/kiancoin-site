@@ -4,7 +4,7 @@
   "description": "## setup",
   "main": "main.js",
   "scripts": {
-    "test": "mocha",
+    "test": "mocha --require esm",
     "build": "rollup main.js --file bundle.js --format iife --config rollup.config.js",
     "watch": "rollup main.js --file bundle.js --format iife --config rollup.config.js --watch"
   },
@@ -19,5 +19,8 @@
     "rollup-plugin-json": "^4.0.0",
     "rollup-plugin-node-resolve": "^5.2.0",
     "rollup-plugin-terser": "^7.0.2"
+  },
+  "devDependencies": {
+    "esm": "^3.2.25"
   }
 }
