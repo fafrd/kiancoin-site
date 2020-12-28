@@ -4,7 +4,7 @@
   "description": "## setup",
   "main": "main.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "test": "mocha",
     "build": "rollup main.js --file bundle.js --format iife --config rollup.config.js"
   },
   "keywords": [],
