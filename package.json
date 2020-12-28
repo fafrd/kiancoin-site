@@ -5,7 +5,8 @@
   "main": "main.js",
   "scripts": {
     "test": "mocha",
-    "build": "rollup main.js --file bundle.js --format iife --config rollup.config.js"
+    "build": "rollup main.js --file bundle.js --format iife --config rollup.config.js",
+    "watch": "rollup main.js --file bundle.js --format iife --config rollup.config.js --watch"
   },
   "keywords": [],
   "author": "",
