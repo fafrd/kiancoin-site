@@ -54,7 +54,7 @@ const addToMetaMask = () => ethereum.request({
 });
 
 const queryGraph = async () => {
-    const endpoint = "http://graph.wizwar.net/subgraphs/id/QmZc1R7j7gu3DZvQ87EPUEibUh6sYTdpLq9u5xDSrsGXog";
+    const endpoint = "https://graph.wizwar.net/subgraphs/id/QmZc1R7j7gu3DZvQ87EPUEibUh6sYTdpLq9u5xDSrsGXog";
     const query = `{
         transfers {
             from
