@@ -1,5 +1,5 @@
 import { ethers } from "ethers"
-import { Transfers } from "./transfers.js"
+import { calcBalances } from "./balances.js"
 
 const kianAddress = "0xb259adadb959ebb03cb280fba58cc3172e96dc78";
 const kianABI = [{"inputs":[],"stateMutability":"nonpayable","type":"constructor"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"owner","type":"address"},{"indexed":true,"internalType":"address","name":"spender","type":"address"},{"indexed":false,"internalType":"uint256","name":"value","type":"uint256"}],"name":"Approval","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"from","type":"address"},{"indexed":true,"internalType":"address","name":"to","type":"address"},{"indexed":false,"internalType":"uint256","name":"value","type":"uint256"}],"name":"Transfer","type":"event"},{"inputs":[],"name":"_initial_supply","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"_name","outputs":[{"internalType":"string","name":"","type":"string"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"_symbol","outputs":[{"internalType":"string","name":"","type":"string"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"owner","type":"address"},{"internalType":"address","name":"spender","type":"address"}],"name":"allowance","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"spender","type":"address"},{"internalType":"uint256","name":"amount","type":"uint256"}],"name":"approve","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"account","type":"address"}],"name":"balanceOf","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"decimals","outputs":[{"internalType":"uint8","name":"","type":"uint8"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"spender","type":"address"},{"internalType":"uint256","name":"subtractedValue","type":"uint256"}],"name":"decreaseAllowance","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"nonpayable","type":"function"},{"inputs":[],"name":"helloWorld","outputs":[{"internalType":"string","name":"","type":"string"}],"stateMutability":"pure","type":"function"},{"inputs":[{"internalType":"address","name":"spender","type":"address"},{"internalType":"uint256","name":"addedValue","type":"uint256"}],"name":"increaseAllowance","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"nonpayable","type":"function"},{"inputs":[],"name":"name","outputs":[{"internalType":"string","name":"","type":"string"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"symbol","outputs":[{"internalType":"string","name":"","type":"string"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"totalSupply","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"recipient","type":"address"},{"internalType":"uint256","name":"amount","type":"uint256"}],"name":"transfer","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"sender","type":"address"},{"internalType":"address","name":"recipient","type":"address"},{"internalType":"uint256","name":"amount","type":"uint256"}],"name":"transferFrom","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"nonpayable","type":"function"}];
@@ -80,44 +80,40 @@ const queryGraph = async () => {
 const populateTopHoldersList = async (queryResp) => {
     // This is actually a bit tricky. I want to make an ordrered list of the holders of kiancoin,
     // but the erc20 contract doesn't give us a way to reverse-lookup who the holders are.
-    // So what we'll do is use a Graph protocol nodes to look up who has received kiancoin in the past,
-    // then get the balance for all those addresses.
+    // So what we do is constuct the current state from the past transaction history.
 
-    Transfers.stuff();
-
-    console.log(JSON.stringify(queryResp));
+    let userAddress = await getUserAddress().catch((error) => {
+        console.error('Error while retrieving user address:', error);
+        return "";
+    });
 
     try {
         var transfers = queryResp.data.transfers;
+        var balances = await calcBalances(queryResp.data.transfers);   
+
+        for (const addr in balances) {
+            if (addr == "0x0000000000000000000000000000000000000000")
+                continue;
+
+            let balance = Number(balances[addr] / 1000000000000000000).toLocaleString(undefined, { minimumFractionDigits: 1, maximumFractionDigits: 18 });
+
+            let you = "";
+            if (addr.toLowerCase() == userAddress.toLowerCase())
+                you = " (you)";
+
+            var entry = addr + you + ": " + balance  + " kiancoins";
+            var li = document.createElement('li');
+            li.appendChild(document.createTextNode(entry));
+            document.getElementById("top-holders").appendChild(li);
+        }
     } catch (error) {
         await new Promise(r => setTimeout(r, 1000));
-        console.warn("Unable to parse graph query response");
+        console.warn("Unable to parse graph query response", e);
+        console.warn("Full query resp: " + JSON.stringify(queryResp));
         document.getElementById("top-holders-loading").innerHTML = "Unable to fetch list of holders.";
         document.getElementById("top-holders-loading").style.color = "salmon";
         document.getElementById("top-holders-loading").style.fontWeight = "bold";
         return;
-    }
-
-    //console.log("length: " + transfers.length)
-
-    for (let i = 0; i < transfers.length; i++) {
-        // asynchronously handle each entry...
-        // this iteration works because 'let' in a for loop declaration creates a unique value for each loop invocation
-        (async () => {
-            //console.log(i + ": " + JSON.stringify(transfers[i]));
-            let numKiansStr = await getBalanceForAddress(transfers[i].to);
-            let you = "";
-            let userAddress = await getUserAddress().catch((error) => {
-                console.error('Error while retrieving user address:', error);
-            });
-            if (transfers[i].to.toLowerCase() == userAddress.toLowerCase())
-                you = " (you)";
-
-            var entry = transfers[i].to + you + ": " + numKiansStr + " kiancoins";
-            var li = document.createElement('li');
-            li.appendChild(document.createTextNode(entry));
-            document.getElementById("top-holders").appendChild(li);
-        })();
     }
 
     document.getElementById("top-holders-loading").style.display = "none";
@@ -128,7 +124,7 @@ const initialize = async () => {
     queryGraph().then((queryResp) => populateTopHoldersList(queryResp));
 
     // Start populating account balance
-    if(!isEthereumAvailable()) {
+    if (!isEthereumAvailable()) {
         // prompt user to install metamask
         document.getElementById("balance").innerHTML = "<a href=\"https://metamask.io/download.html\">Install MetaMask wallet</a> to view your balance";
     } else {
