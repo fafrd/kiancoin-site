@@ -1,11 +1,13 @@
 html {
-    background: black;
-
+    --bg-color: black;
+    --fg-color: #ccc;
+    --accent-color: green;
+    background: var(--bg-color);
 }
 
 body {
-    background: black;
-    color: #ccc;
+    background: var(--bg-color);
+    color: var(--fg-color);
     padding: 2em 1em;
     font-size: 2em;
     font-family: monospace;
@@ -29,5 +31,18 @@ body {
 }
 
 a {
-    color: green;
+    color: var(--accent-color);
+}
+
+a:hover {
+    color: var(--fg-color);
+}
+
+p {
+    margin-block-start: 0.75em;
+    margin-block-end: 0.75em;
+}
+
+footer {
+    font-size: 0.65em;
 }
