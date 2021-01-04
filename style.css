@@ -24,6 +24,8 @@ body {
 }
 
 #top-holders {
+    display: flex;
+    flex-direction: column-reverse;
 }
 
 #addToMetaMask {

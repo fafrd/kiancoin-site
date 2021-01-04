@@ -104,6 +104,7 @@ const populateTopHoldersList = async (queryResp) => {
             var entry = addr + you + ": " + balance  + " kiancoins";
             var li = document.createElement('li');
             li.appendChild(document.createTextNode(entry));
+            li.style.order = Number(balances[addr] / 10000000000);
             document.getElementById("top-holders").appendChild(li);
         }
     } catch (error) {
