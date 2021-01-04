@@ -18,14 +18,16 @@ let sampleBalanceResult_4transfers = { '0x00000000000000000000000000000000000000
     '0x73bd1162e9da1b551d4601acf83158f3ac2247a9': '0100000000000000000'
 };
 
-describe('Transfers', function() {
+describe('balances.js', function() {
     describe('createEmptyMap', function() {
         it('should initialize map from transfers', function() {
             let transfers = sampleQueryResp_3transfers.data.transfers;
             let result = createEmptyMap(transfers);
             assert.deepEqual(emptyMap, result);
         });
+    });
 
+    describe('calcBalances', function () {
         it('should calculate the list of top holders (3 transfers)', function () {
             let transfers = sampleQueryResp_3transfers.data.transfers;
             let result = calcBalances(transfers);
