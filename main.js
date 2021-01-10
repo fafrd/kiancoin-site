@@ -94,8 +94,10 @@ const populateTopHoldersList = async (queryResp) => {
         for (const addr in balances) {
             if (addr == "0x0000000000000000000000000000000000000000")
                 continue;
+            if (addr == "0x636483cb4e3e09e4a8e9d7f618a7f544579cc38c")
+                continue;
 
-            let balance = Number(balances[addr] / 1000000000000000000).toLocaleString(undefined, { minimumFractionDigits: 1, maximumFractionDigits: 18 });
+            let balance = ethers.utils.formatEther(balances[addr]);
 
             let you = "";
             if (addr.toLowerCase() == userAddress.toLowerCase())
@@ -104,12 +106,12 @@ const populateTopHoldersList = async (queryResp) => {
             var entry = addr + you + ": " + balance  + " kiancoins";
             var li = document.createElement('li');
             li.appendChild(document.createTextNode(entry));
-            li.style.order = Number(balances[addr] / 10000000000);
+            li.style.order = balances[addr] / 10000000000n;
             document.getElementById("top-holders").appendChild(li);
         }
     } catch (error) {
         await new Promise(r => setTimeout(r, 1000));
-        console.warn("Unable to parse graph query response", e);
+        console.warn("Unable to parse graph query response", error);
         console.warn("Full query resp: " + JSON.stringify(queryResp));
         document.getElementById("top-holders-loading").innerHTML = "Unable to fetch list of holders.";
         document.getElementById("top-holders-loading").style.color = "salmon";

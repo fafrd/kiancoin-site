@@ -2,11 +2,11 @@ function createEmptyMap(transfers) {
     let map = {};
 
     for (let i = 0; i < transfers.length; i++) {
-        map[transfers[i].from] = 0;
+        map[transfers[i].from] = 0n;
     }
 
     for (let i = 0; i < transfers.length; i++) {
-        map[transfers[i].to] = 0;
+        map[transfers[i].to] = 0n;
     }
 
     return map;
@@ -21,8 +21,8 @@ function calcBalances(transfers) {
 
     let map = createEmptyMap(transfers);
     for (let i = 0; i < transfers.length; i++) {
-        map[transfers[i].to] += transfers[i].value;
-        map[transfers[i].from] -= transfers[i].value;
+        map[transfers[i].to] += BigInt(transfers[i].value);
+        map[transfers[i].from] -= BigInt(transfers[i].value);
     }
 
     return map;
