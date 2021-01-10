@@ -28,7 +28,7 @@ body {
     flex-direction: column-reverse;
 }
 
-#addToMetaMask {
+#addToMetaMask, #price {
     display: none;
 }
 
