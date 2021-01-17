@@ -8,7 +8,7 @@ html {
 body {
     background: var(--bg-color);
     color: var(--fg-color);
-    padding: 2em 1em;
+    padding: 1em;
     font-size: 2em;
     font-family: monospace;
 }
@@ -24,8 +24,14 @@ body {
 }
 
 #top-holders {
-    display: flex;
-    flex-direction: column-reverse;
+    display: grid;
+    grid-template-columns: minmax(12em, max-content) max-content;
+    grid-gap: 0 1em;
+}
+
+#top-holders > .address {
+    overflow-x: hidden;
+    text-overflow: ellipsis;
 }
 
 #addToMetaMask, #price {
