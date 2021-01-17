@@ -23,20 +23,26 @@ const getBalanceForAddress = async address => await getKiancoinContract()
     .then(balance => Number(balance / 1000000000000000000))
     .then(balance => balance.toLocaleString(undefined, { minimumFractionDigits: 1, maximumFractionDigits: 18 }));
 
-const getUniswapContract = async address => await new ethers.Contract(address, uniswapAbi, provider);
+// old way of getting price- fetch directly from contract
+/*const getUniswapContract = async address => await new ethers.Contract(address, uniswapAbi, provider);
 const getKiancoinEthPrice = async () => await getUniswapContract(uniswapKiancoinAddress)
     .then(contract => contract.getReserves())
     .then(reserves => Number(reserves._reserve0) / Number(reserves._reserve1));
 const getEthUsdPrice = async () => await getUniswapContract(uniswapUsdcAddress)
     .then(contract => contract.getReserves())
     .then(reserves => Number(reserves._reserve0) / Number(reserves._reserve1) * 1e12); // times 10^12 because usdc only has 6 decimals
+*/
 
 // returns price as { eth: kiancoin/eth price, usd: kiancoin/usd price }
-const getPricesFromUniswap = async () => Promise.all([getKiancoinEthPrice(), getEthUsdPrice()])
+//const getPricesFromUniswap = async () => Promise.all([getKiancoinEthPrice(), getEthUsdPrice()])
+const getPricesFromUniswap = async () => queryUniswapSubgraph()
     .then(res => {
-        return {"eth": res[0], "usd": res[1] / res[0]};
+        if (typeof res == 'undefined') {
+            console.warn("Unable to determine price");
+            return;
+        }
+        return {"eth": res.data.kian_eth[0].token1Price, "usd": res.data.usdc_eth[0].token0Price * res.data.kian_eth[0].token1Price};
     });
-
 
 const connectWallet = async () => {
     await ethereum.request({
@@ -49,11 +55,23 @@ const getBalance = async () => {
 };
 
 const setBalance = async (kiancoinBalance, kiancoinPrice) => {
+    document.getElementById("balance").innerHTML = kiancoinBalance + " kiancoin";
+
+    if (typeof kiancoinPrice == 'undefined') {
+        console.warn("Unable to determine price");
+        return;
+    }
+
     let amountInUSD = (kiancoinBalance * kiancoinPrice.usd).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-    document.getElementById("balance").innerHTML = kiancoinBalance + " kiancoin ($" + amountInUSD + ")";
+    document.getElementById("balance").innerHTML = document.getElementById("balance").innerHTML + " ($" + amountInUSD + ")";
 };
 
 const setPrice = async kiancoinPrice => {
+    if (typeof kiancoinPrice == 'undefined') {
+        console.warn("Unable to determine price");
+        return;
+    }
+
     document.getElementById("price").style.display = "initial";
 
     let price = kiancoinPrice.usd.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -87,6 +105,28 @@ const queryKiancoinSubgraph = async () => {
 
     return queryGraph(endpoint, query);
 };
+
+const queryUniswapSubgraph = async () => {
+    //return format looks like
+    // {"data":{"kian_eth":[{"token0Price":"0.2368332637943856856024000945079888","token1Price":"4.222379846389237523836880778379648"}],"usdc_eth":[{"token0Price":"1219.102908466617854574461220188973","token1Price":"0.0008202752967407776053589635204442992"}]}}
+
+    //const endpoint = "https://graph.wizwar.net/subgraphs/id/QmQkfiA1MRv4WQRfxgVgi7PCZ6gziNhXwJkjD1NYfRHwHt";
+    // while i wait for ^ to finish syncing...
+    const endpoint = "https://api.thegraph.com/subgraphs/name/uniswap/uniswap-v2";
+
+    const query = `{
+        kian_eth: pairs(where: { id: "0x636483cb4e3e09e4a8e9d7f618a7f544579cc38c" }) {
+            token0Price
+            token1Price
+        }
+        usdc_eth: pairs(where: { id: "0xb4e16d0168e52d35cacd2c6185b44281ec28c9dc" }) {
+            token0Price
+            token1Price
+        }
+    }`;
+
+    return queryGraph(endpoint, query);
+}
 
 const queryEnsSubgraph = async addresses => {
     // return format looks like
@@ -196,18 +236,19 @@ const replaceAddrWithENS = async () => {
 
 // called when we're connected and ready to query metamask
 const _initialize = async () => {
-    // async get balance
-    // async get price (in both eth and usd)
+    // async get balance, async get price (in both eth and usd)
     // when both balance+price are retrieved, populate balance and price info
-    Promise.all([getBalance(), getPricesFromUniswap()]).then(res => {
-        setBalance(...res);
-        setPrice(res[1]);
+    Promise.all([getBalance(), getPricesFromUniswap()]).then(prices => {
+        setBalance(...prices);
     });
 }
 
 const initialize = async () => {
     // Asynchronously start populating the list of top kiancoin holders
     queryKiancoinSubgraph().then(queryResp => populateTopHoldersList(queryResp)).then(replaceAddrWithENS);
+
+    // set marketcap
+    getPricesFromUniswap().then(price => setPrice(price));
 
     // Start populating account balance
     if (!isEthereumAvailable()) {
