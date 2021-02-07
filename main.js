@@ -1,5 +1,5 @@
-import { ethers } from "ethers"
-import { calcBalances } from "./balances.js"
+import { ethers } from "ethers";
+import { calcBalances } from "./balances.js";
 
 const kianAddress = "0xb259adadb959ebb03cb280fba58cc3172e96dc78";
 const kianAbi = [{"inputs":[],"stateMutability":"nonpayable","type":"constructor"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"owner","type":"address"},{"indexed":true,"internalType":"address","name":"spender","type":"address"},{"indexed":false,"internalType":"uint256","name":"value","type":"uint256"}],"name":"Approval","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"from","type":"address"},{"indexed":true,"internalType":"address","name":"to","type":"address"},{"indexed":false,"internalType":"uint256","name":"value","type":"uint256"}],"name":"Transfer","type":"event"},{"inputs":[],"name":"_initial_supply","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"_name","outputs":[{"internalType":"string","name":"","type":"string"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"_symbol","outputs":[{"internalType":"string","name":"","type":"string"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"owner","type":"address"},{"internalType":"address","name":"spender","type":"address"}],"name":"allowance","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"spender","type":"address"},{"internalType":"uint256","name":"amount","type":"uint256"}],"name":"approve","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"account","type":"address"}],"name":"balanceOf","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"decimals","outputs":[{"internalType":"uint8","name":"","type":"uint8"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"spender","type":"address"},{"internalType":"uint256","name":"subtractedValue","type":"uint256"}],"name":"decreaseAllowance","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"nonpayable","type":"function"},{"inputs":[],"name":"helloWorld","outputs":[{"internalType":"string","name":"","type":"string"}],"stateMutability":"pure","type":"function"},{"inputs":[{"internalType":"address","name":"spender","type":"address"},{"internalType":"uint256","name":"addedValue","type":"uint256"}],"name":"increaseAllowance","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"nonpayable","type":"function"},{"inputs":[],"name":"name","outputs":[{"internalType":"string","name":"","type":"string"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"symbol","outputs":[{"internalType":"string","name":"","type":"string"}],"stateMutability":"view","type":"function"},{"inputs":[],"name":"totalSupply","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"recipient","type":"address"},{"internalType":"uint256","name":"amount","type":"uint256"}],"name":"transfer","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"sender","type":"address"},{"internalType":"address","name":"recipient","type":"address"},{"internalType":"uint256","name":"amount","type":"uint256"}],"name":"transferFrom","outputs":[{"internalType":"bool","name":"","type":"bool"}],"stateMutability":"nonpayable","type":"function"}];
@@ -23,19 +23,9 @@ const getBalanceForAddress = async address => await getKiancoinContract()
     .then(balance => Number(balance / 1000000000000000000))
     .then(balance => balance.toLocaleString(undefined, { minimumFractionDigits: 1, maximumFractionDigits: 18 }));
 
-// old way of getting price- fetch directly from contract
-/*const getUniswapContract = async address => await new ethers.Contract(address, uniswapAbi, provider);
-const getKiancoinEthPrice = async () => await getUniswapContract(uniswapKiancoinAddress)
-    .then(contract => contract.getReserves())
-    .then(reserves => Number(reserves._reserve0) / Number(reserves._reserve1));
-const getEthUsdPrice = async () => await getUniswapContract(uniswapUsdcAddress)
-    .then(contract => contract.getReserves())
-    .then(reserves => Number(reserves._reserve0) / Number(reserves._reserve1) * 1e12); // times 10^12 because usdc only has 6 decimals
-*/
-
 // returns price as { eth: kiancoin/eth price, usd: kiancoin/usd price }
 //const getPricesFromUniswap = async () => Promise.all([getKiancoinEthPrice(), getEthUsdPrice()])
-const getPricesFromUniswap = async () => queryUniswapSubgraph()
+const getPricesFromUniswap = async () => queryUniswapSubgraph_getPrices()
     .then(res => {
         if (typeof res == 'undefined') {
             console.warn("Unable to determine price");
@@ -106,7 +96,7 @@ const queryKiancoinSubgraph = async () => {
     return queryGraph(endpoint, query);
 };
 
-const queryUniswapSubgraph = async () => {
+const queryUniswapSubgraph_getPrices = async () => {
     //return format looks like
     // {"data":{"kian_eth":[{"token0Price":"0.2368332637943856856024000945079888","token1Price":"4.222379846389237523836880778379648"}],"usdc_eth":[{"token0Price":"1219.102908466617854574461220188973","token1Price":"0.0008202752967407776053589635204442992"}]}}
 
@@ -122,6 +112,30 @@ const queryUniswapSubgraph = async () => {
         usdc_eth: pairs(where: { id: "0xb4e16d0168e52d35cacd2c6185b44281ec28c9dc" }) {
             token0Price
             token1Price
+        }
+    }`;
+
+    return queryGraph(endpoint, query);
+}
+
+const queryUniswapSubgraph_getHoldingsForUsers = async addressList => {
+    //const endpoint = "https://graph.wizwar.net/subgraphs/id/QmQkfiA1MRv4WQRfxgVgi7PCZ6gziNhXwJkjD1NYfRHwHt";
+    // while i wait for ^ to finish syncing...
+    const endpoint = "https://api.thegraph.com/subgraphs/name/uniswap/uniswap-v2";
+
+    const addressListLower = addressList.map(a => a.toLowerCase());
+    const query = `{
+        users(where:{ id_in: ${JSON.stringify(addressListLower)}}) {
+            id
+            liquidityPositions(where:{ liquidityTokenBalance_gt: 0}) {
+                liquidityTokenBalance
+                pair {
+                    id
+                    reserve0
+                    reserve1
+                    totalSupply
+                }
+            }
         }
     }`;
 
@@ -173,9 +187,30 @@ const populateTopHoldersList = async queryResp => {
         return "";
     });
 
+    const addressList = queryResp.data.transfers.map(a => a.from);
+    const uniswapBalanceQuery = queryUniswapSubgraph_getHoldingsForUsers(addressList);
+
     try {
+        // first fetch erc20 balance according to past transfers
         const transfers = queryResp.data.transfers;
-        const balances = await calcBalances(queryResp.data.transfers);
+        const balances = await calcBalances(queryResp.data.transfers)
+
+        // then fetch balances held in the kiancoin/eth uniswap pair
+        // (ideally this should be moved to balances.js)
+        const uniswapBalances_raw = await uniswapBalanceQuery;
+        const uniswapBalances = uniswapBalances_raw.data.users
+            .filter(u => u.liquidityPositions.length > 0) // why is this subgraph returning addrs w no position? filter them...
+
+        let uniswapBalances_mapped = {};
+        uniswapBalances.forEach(u => {
+            const kiancoinLP = u.liquidityPositions.find(lp => lp.pair.id == "0x636483cb4e3e09e4a8e9d7f618a7f544579cc38c");
+            if (typeof kiancoinLP !== "undefined") {
+                //               reserve0 / totalSupply * liquidityTokenBalance
+                const bal_decimal = kiancoinLP.pair.reserve0 / kiancoinLP.pair.totalSupply * kiancoinLP.liquidityTokenBalance;
+                balances[u.id] += BigInt(bal_decimal * 10e17);
+            }
+        });
+
         const sortedBalances = Object.entries(balances).sort(([,a],[,b]) => (a > b) ? -1 : ((a < b) ? 1 : 0));
 
         for (const i in sortedBalances) {
@@ -184,6 +219,8 @@ const populateTopHoldersList = async queryResp => {
             if (sortedBalances[i][0] == "0x0000000000000000000000000000000000000000")
                 continue;
             if (sortedBalances[i][0] == "0x636483cb4e3e09e4a8e9d7f618a7f544579cc38c") // uniswap contract
+                continue;
+            if (sortedBalances[i][0] == "0x7a250d5630b4cf539739df2c5dacb4c659f2488d") // uniswap special address?
                 continue;
 
             const addrDiv = document.createElement('div');
@@ -219,11 +256,10 @@ const replaceAddrWithENS = async () => {
     try {
         const addrs = [...document.getElementsByClassName("address")].map(addr => addr.innerText);
         const ensResult = await queryEnsSubgraph(addrs);
-        //console.log("ensResult: " + JSON.stringify(ensResult));
 
         // given ens, replace address w ENS
         [...document.getElementsByClassName("address")].forEach(async addrNode => {
-            var addr_ = "addr_" + addrNode.innerText;
+            let addr_ = "addr_" + addrNode.innerText;
             if (ensResult.data[addr_].length > 0) {
                 document.getElementById(addr_).innerHTML = ensResult.data[addr_][0].name;
 
