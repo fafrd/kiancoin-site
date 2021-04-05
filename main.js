@@ -220,7 +220,8 @@ const populateTopHoldersList = async queryResp => {
                 continue;
             if (sortedBalances[i][0] == "0x636483cb4e3e09e4a8e9d7f618a7f544579cc38c") // uniswap contract
                 continue;
-            if (sortedBalances[i][0] == "0x7a250d5630b4cf539739df2c5dacb4c659f2488d") // uniswap special address?
+
+            if (sortedBalances[i][1] == 0) // no longer holding any kiancoin
                 continue;
 
             const addrDiv = document.createElement('div');
