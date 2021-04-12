@@ -146,8 +146,6 @@ const queryEnsSubgraph = async addresses => {
     // return format looks like
     // {"data":{"addr_0x08b4249c79215fdd6a048af43e9ff86b9ee6be2e":[],"addr_0x122fed718c784ad25e2a5ab351f034fc57512a48":[],"addr_0x4c71526d3f7b112aaa4c0af173a6a47ab69d54cd":[],"addr_0x5295b474f3a0bb39418456c96d6fcf13901a4aa1":[{"name":"kian.eth"}],"addr_0x73bd1162e9da1b551d4601acf83158f3ac2247a9":[],"addr_0x969b81bba3a3eae0fccc78f8b64f012fd823a912":[],"addr_0xbc31fda98ed7cf6daaf50327d922b78cbc486d23":[],"addr_0xbdb6eb461e9602ab64ca5e805a3906dbc1095250":[],"addr_0xe3a2b4da15130c7830862e945a2383f0a29b8bc8":[{"name":"isnowglobal.eth"}],"addr_0xfc6f9a3c0fe29423ca6b974109817a323998f762":[{"name":"travisformayor.eth"}],"addr_0xff82289231128fc6f185137f445d34e30d036c98":[]}}
 
-    //const endpoint = "https://graph.wizwar.net/subgraphs/id/Qmb5arRTXt2DJCPakb8iptE5mhVwNVZR5ZZR5Sm3QhvZa8";
-    // while i wait for ^ to finish syncing...
     const endpoint = "https://api.thegraph.com/subgraphs/name/ensdomains/ens";
     const query = `{
         ${addresses.map(addr => {
@@ -188,6 +186,8 @@ const populateTopHoldersList = async queryResp => {
     });
 
     const addressList = queryResp.data.transfers.map(a => a.from);
+    // hack: add the address that received UNI-V2 kiancoin lp shares, but never held kiancoin directly
+    addressList.push("0xaa8bb93e2083fca1b5169626276a1dd78473728f")
     const uniswapBalanceQuery = queryUniswapSubgraph_getHoldingsForUsers(addressList);
 
     try {
@@ -207,7 +207,8 @@ const populateTopHoldersList = async queryResp => {
             if (typeof kiancoinLP !== "undefined") {
                 //               reserve0 / totalSupply * liquidityTokenBalance
                 const bal_decimal = kiancoinLP.pair.reserve0 / kiancoinLP.pair.totalSupply * kiancoinLP.liquidityTokenBalance;
-                balances[u.id] += BigInt(bal_decimal * 10e17);
+                const erc20Balance = balances[u.id] || BigInt(0);
+                balances[u.id] = erc20Balance + BigInt(bal_decimal * 10e17);
             }
         });
 
